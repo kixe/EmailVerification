@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * ProcessWire Module Email Verification
+ *
+ * 
+ * checks an email addresses against blacklist and availability of mailhost.
+ * Blacklisted domains and email addresses are simply stored in a text file. Easy to edit
+ * 
+ * made by kixe (Christoph Thelen) 05.10.14
+ * Licensed under GNU/GPL v3
+ * 
+ * 
+ * ProcessWire 2.x 
+ * Copyright (C) 2013 by Ryan Cramer 
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ * 
+ * http://processwire.com
+ *
+ */
+
+class EmailVerification extends WireData implements Module {
+
+	public static function getModuleInfo() {
+
+		return array(
+
+			'title' => 'Email Verification', 
+			'version' => 100, 
+			'summary' => 'E-Mail Verification. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit',
+			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
+			'singular' => false, 
+			'autoload' => false,
+			'author' => 'kixe',
+		    //'requires' => 'ProcessWire>=2.4.3',
+			'icon' => 'envelope-o',
+			'license' => 'GNU-GPLv3',
+			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html'
+			);
+	}
+
+	/**
+	 *
+	 * @return boolean/ string
+	 */
+	public function blacklisted($email) {
+		list($local, $domain) = explode("@", $email);
+		$file = file('mogelmails.txt');
+		if(in_array($domain."\n",$file) || in_array($email."\n",$file)) return $domain;
+		return false;
+	}
+
+	/**
+	 *
+	 * @return boolean
+	 */
+	public function hostavailable($email) {
+		list($local, $domain) = explode("@", $email);
+		if(checkdnsrr($domain, "MX") || checkdnsrr($domain, "A")) return true;
+		return false;
+	}
+	
+}
