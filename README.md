@@ -3,7 +3,7 @@ EMAIL VERIFICATION
 
 Checks an email address against blacklist and availability of mailhost. (MX and A Resource Record)
 
-Blacklisted domains and email addresses are listed in an easy to edit text file *mogelmails.txt* which is stored in the repository of this module.
+Blacklisted domains and email addresses are listed in an easy to edit text file **mogelmails.txt** which is stored in the repository of this module.
 
 ## Use
 
@@ -19,7 +19,7 @@ if(!$mailcheck->hostavailable($email)) echo 'Mailhost not available';
 ```
 
 ## Edit Exclusions List
-Open (or create new) mogelmails.txt and edit your exclusions list.
+Open (or create new) **mogelmails.txt** and edit your exclusions list.
 
 Write one complete email address or one domainname per line.
 
@@ -32,7 +32,7 @@ virus.invalid
 ```
 
 ## License
-[GNU_GPLv3](http://www.gnu.org/licenses/gpl-3.0.html)
+[GNU-GPLv3](http://www.gnu.org/licenses/gpl-3.0.html)
 
 ## Author
 kixe (Christoph Thelen)
