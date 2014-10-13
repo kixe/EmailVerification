@@ -1,5 +1,5 @@
 EMAIL VERIFICATION
-===================
+==================
 
 Checks an email address against blacklist and availability of mailhost. (MX and A Resource Record)
 
@@ -23,6 +23,7 @@ if(!$mailcheck->hostavailable($email)) echo 'Mailhost not available';
 
 ## Edit Exclusions List
 Open (or create new) mogelmails.txt and edit your exclusions list.
+
 Write one complete email address or one domainname per line.
 
 ```
