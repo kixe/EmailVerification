@@ -5,9 +5,6 @@ Checks an email address against blacklist and availability of mailhost. (MX and 
 
 Blacklisted domains and email addresses are listed in an easy to edit text file *mogelmails.txt* which is stored in the repository of this module.
 
-## Installation
-as usual
-
 ## Use
 
 ```
