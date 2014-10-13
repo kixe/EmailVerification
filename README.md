@@ -9,7 +9,7 @@ Blacklisted domains and email addresses are listed in an easy to edit text file 
 
 ```
 
-$mailcheck = $modules->get('EmailCheck');
+$mailcheck = $modules->get('EmailVerification');
 
 $email = 'susi@spammer.example'; // your sanitized input
 if($mailcheck->blacklisted($email)) echo 'Email Provider not allowed';
