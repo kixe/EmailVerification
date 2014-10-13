@@ -14,7 +14,7 @@ as usual
 
 $mailcheck = $modules->get('EmailCheck');
 
-$email = 'susi@trashmail.com'; // your sanitized input
+$email = 'susi@spammer.example'; // your sanitized input
 if($mailcheck->blacklisted($email)) echo 'Email Provider not allowed';
 if(!$mailcheck->hostavailable($email)) echo 'Mailhost not available';
 
@@ -22,8 +22,8 @@ if(!$mailcheck->hostavailable($email)) echo 'Mailhost not available';
 ```
 
 ## Edit Exclusions List
-open (or create new) mogelmails.txt and edit your exclusions list
-write one complete email address or one domainname per line
+Open (or create new) mogelmails.txt and edit your exclusions list.
+Write one complete email address or one domainname per line.
 
 ```
 
