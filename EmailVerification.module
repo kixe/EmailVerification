@@ -33,7 +33,7 @@ class EmailVerification extends WireData implements Module {
 		    //'requires' => 'ProcessWire>=2.4.3',
 			'icon' => 'envelope-o',
 			'license' => 'GNU-GPLv3',
-			'hreflicense' => 'LICENSE'
+			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html'
 			);
 	}
 
