@@ -1,9 +1,15 @@
 EMAIL VERIFICATION
 ==================
 
-Checks an email address against blacklist and availability of mailhost. (MX and A Resource Record)
+Provides API for E-Mail and Domain Verification. Options:   
 
-Blacklisted domains and email addresses are listed in an easy to edit text file **mogelmails.txt** which is stored in the repository of this module.
++ Check email address against blacklist (editable textfile pulled from service mogelmail.de updated weekly)  
++ Check availability of mailhost. (MX and A Resource Record)
++ Validate Top Level Domain. (list of TLDs (punycode) pulled from IANA stored in local textfile, updated monthly)
++ Validate Domainname (Syntax)
++ Validate Hostname (Syntax)
+
+Blacklisted domains and email addresses are listed in an easy to edit text file **mogelmails.txt** which is stored in the repository of this module.  
 
 ## Use
 
@@ -11,21 +17,25 @@ Blacklisted domains and email addresses are listed in an easy to edit text file 
 
 $mailcheck = $modules->get('EmailVerification');
 
-$email = 'susi@spammer.example'; // your sanitized input
-if($mailcheck->blacklisted($email)) echo 'Email Provider not allowed';
-if(!$mailcheck->hostavailable($email)) echo 'Mailhost not available';
+$mailcheck->getTLDs(cycle=2592000) // get Array of punycoded TLDs
+$mailcheck->validDomainName(domain); // return bool
+$mailcheck->validHostName(host); // return bool/ string
+$mailcheck->blacklisted(email|domain) // return bool/ string
+$mailcheck->hostavailable(email|domain) // return bool
 
+$mailcheck->addToBlacklist(email|domain) // add single
+$mailcheck->add(string,replace=false) // create, overwrite, update blacklist
+$mailcheck->clean() // cleanup blacklist file (remove empty strings & duplicates, sort)
 
 ```
 
 ## Edit Exclusions List
-Open (or create new) **mogelmails.txt** and edit your exclusions list.
-
-Write one complete email address or one domainname per line.
+Use API above or open **mogelmails.txt** and edit your exclusions list.  
+Write one domainname per line.  
 
 ```
 
-badmail@example.org
+example.org
 spammer.example
 virus.invalid
 
