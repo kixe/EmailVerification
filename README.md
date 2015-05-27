@@ -5,7 +5,6 @@ Provides API for E-Mail and Domain Verification. Options:
 
 + Check email address against blacklist (editable textfile pulled from service mogelmail.de updated weekly)
 + Check availability of mailhost. (MX and A Resource Record)
-
 + Validate Top Level Domain. (list of TLDs (punycode) pulled from IANA stored in local textfile, updated monthly)
 + Validate Domainname (Syntax)
 + Validate Hostname (Syntax)
