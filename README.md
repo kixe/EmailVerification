@@ -11,7 +11,7 @@ Provides API for E-Mail and Domain Verification. Options:
 
 Blacklisted domains and email addresses are listed in an easy to edit text file **mogelmails.txt** which is stored in the repository of this module.  
 
-## Use
+## API
 
 ```
 
