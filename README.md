@@ -29,18 +29,6 @@ $mailcheck->clean() // cleanup blacklist file (remove empty strings & duplicates
 
 ```
 
-## Edit Exclusions List
-Use API above or open **mogelmails.txt** and edit your exclusions list.  
-Write one domainname per line.  
-
-```
-
-example.org
-spammer.example
-virus.invalid
-
-```
-
 ## License
 [GNU-GPLv3](http://www.gnu.org/licenses/gpl-3.0.html)
 
