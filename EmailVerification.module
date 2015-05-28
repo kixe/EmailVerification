@@ -3,9 +3,9 @@
 /**
  * ProcessWire Module Email Verification
  *
- * 
+ * E-Mail Verification and Domain Validation via API.
  * checks an email addresses against blacklist and availability of mailhost.
- * Blacklisted domains are simply stored in a text file. Easy to edit
+ * Blacklisted domains are simply stored in a text file. Easy to edit.
  * 
  * made by kixe (Christoph Thelen) 05.10.14
  * Licensed under GNU/GPL v3
@@ -27,7 +27,7 @@ class EmailVerification extends WireData implements Module {
 
 			'title' => 'Email Verification', 
 			'version' => 110, 
-			'summary' => 'E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit',
+			'summary' => 'E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.',
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
 		    //'requires' => 'ProcessWire>=2.4.3',
