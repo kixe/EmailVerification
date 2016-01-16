@@ -26,15 +26,18 @@ class EmailVerification extends WireData implements Module {
 		return array(
 
 			'title' => 'Email Verification', 
-			'version' => 111, 
-			'summary' => 'E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.',
+			'version' => 112, 
+			'summary' => __('E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.'),
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
-		    //'requires' => 'ProcessWire>=2.4.3',
 			'icon' => 'envelope-o',
 			'license' => 'GNU-GPLv3',
 			'hreflicense' => 'http://www.gnu.org/licenses/gpl-3.0.html'
 			);
+	}
+
+	public function __construct() {
+	    // intentionally empty
 	}
 
 	/*

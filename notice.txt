@@ -1,0 +1,40 @@
+emailVerification
+
+detect unicode ranges
+
+http://kourge.net/projects/regexp-unicode-block
+
+0370-03FF	Greek and Coptic
+0400-04FF	Cyrillic
+0590-05FF	Hebrew
+
+allowed chars for com and net tlds
+http://www.verisigninc.com/en_US/channel-resources/domain-registry-products/idn/index.xhtml
+
+net: Devanagari, Simplified Chinese, Hangul
+com:
+
+http://www.unicode.org/cldr/utility/confusables.jsp
+
+http://www.irongeek.com/homoglyph-attack-generator.php?decoded=%40&idn_version=2008&encode=Encode+%3E%3E
+
+
+http://unicode.org/reports/tr46/
+label-separators:
+
+    U+002E ( . ) FULL STOP
+    U+FF0E ( ． ) FULLWIDTH FULL STOP
+    U+3002 ( 。 ) IDEOGRAPHIC FULL STOP
+    U+FF61 ( ｡ ) HALFWIDTH IDEOGRAPHIC FULL STOP
+
+validation-service.com?api_key&vhn=hostname
+validation-service.com?api_key&vdn=hostname&idntld=
+
+idn=
+email=
+tld=
+
+
+$pattern = '/^((?!-)[a-z0-9-]{1,63}(?<!-)([\.\x{ff0ee}\x{3002}\x{ff61}]{1}))+([a-z]{2,63}|xn--[a-z0-9]{2,63})$/i';
+
+
