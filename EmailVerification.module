@@ -12,7 +12,8 @@
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/...
  * @version 1.2.0
- * @since 1.2.0 2018/02/18 - update email check via fiddlemail.com /mogelmail.de
+ * @since 1.2.0 2018/02/18 - update email check via fiddlemail.com/ mogelmail.de
+ * @since 1.2.1 2018/02/18 - update return value add() and addToBlacklist()
  * 
  * 
  * ProcessWire 2.x/ 3.x 
@@ -30,7 +31,7 @@ class EmailVerification extends WireData implements Module {
 		return array(
 
 			'title' => 'Email Verification', 
-			'version' => 120, 
+			'version' => 121, 
 			'summary' => __('E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.'),
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
@@ -219,13 +220,12 @@ class EmailVerification extends WireData implements Module {
 	 * manually update blacklist with single email address or maildomain
 	 * 
 	 * @param $input string (domain/ email address)
-	 * @return boolean
+	 * @return boolean/ string
 	 */
 	public function addToBlacklist($input) {
 		$domain = $this->getDomain($input);
 		if (!$this->validHost($domain)) return false;
-		if ($this->add($domain, false)) return true;		
-		return false;
+		return $this->add($domain, false);
 	}
 
 	/**
@@ -245,7 +245,7 @@ class EmailVerification extends WireData implements Module {
 			flock($file, LOCK_UN);
 			fclose($file);
 			// chmod($this->filepath, 0777); // warning: operation not permitted
-			return true;
+			return $domain;
 		} else {
 			return false;
 		}		
