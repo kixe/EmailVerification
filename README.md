@@ -14,15 +14,29 @@ Blacklisted domains are listed in an easy to edit text file **blacklist.txt** wh
 ## API
 
 ```
+// get module  
 $mailcheck = $modules->get('EmailVerification');
 
-$mailcheck->blacklisted(email|domain) // return bool/ string
-$mailcheck->validTLD(tld) // validate a top level domain return bool
-$mailcheck->getTLDs(cycle=2592000) // get Array of punycoded TLDs, cyclic updated data pulled from IANA
-$mailcheck->validDomainName(domain); // return bool
-$mailcheck->validHostName(host); // return bool/ string
-$mailcheck->validHost(email|domain) // return bool
-$mailcheck->addToBlacklist(email|domain) // add single value
+// return bool/ string - automatted update of blacklist file
+$mailcheck->blacklisted(email|domain)
+
+// return bool - validate a top level domain, checks against IANA list
+$mailcheck->validTLD(tld)
+
+// return array of punycoded TLDs - cyclic updated, data pulled from IANA
+$mailcheck->getTLDs(cycle=2592000)
+
+// return bool - checks syntax converts to punycode
+$mailcheck->validDomainName(domain);
+
+// return bool - checks punycode encoded syntax 
+$mailcheck->validHostName(host);  
+  
+// return bool - checks syntax and accessibility
+$mailcheck->validHost(email|domain)
+
+// add a single value to blacklist
+$mailcheck->addToBlacklist(email|domain)
 ```
 
 ## License
