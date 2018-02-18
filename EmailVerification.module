@@ -41,7 +41,7 @@ class EmailVerification extends WireData implements Module {
 			);
 	}
 
-	protected $filepath = __DIR__.'/blacklist.txt';
+	protected $filepath;
 
 	public function __construct() {
 	    // intentionally empty
@@ -66,6 +66,7 @@ class EmailVerification extends WireData implements Module {
 	*/
 
 	public function init() {
+		$this->filepath = __DIR__ .'/blacklist.txt';
 		$this->update();
 	}
 
@@ -187,7 +188,7 @@ class EmailVerification extends WireData implements Module {
 	public function validHost($input = null) {
 		if (!$input) return null;
 		$domain = $this->getDomain($input);
-		if (!$this->validHostName($input)) return false;
+		if (!$this->validHostName($domain)) return false;
 		if (checkdnsrr($domain, "MX")) return "MX";
 		if (checkdnsrr($domain, "A")) return "A";
 		return false;

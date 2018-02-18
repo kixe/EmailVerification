@@ -3,7 +3,7 @@ EMAIL VERIFICATION
 
 Provides API for E-Mail and Domain Verification. Options:   
 
-+ Check email address against blacklist (editable textfile pulled from service fiddlemail.com/mogelmail.de updated weekly) Use the implementation on your own risk. **You maybe need a a special license to call fiddlemail.com, mogelmail.de or any other domain related to this service.**
++ Check email address against blacklist (editable textfile pulled from service fiddlemail.com/mogelmail.de updated weekly) Use the implementation on your own risk. **You maybe need a special license to call fiddlemail.com, mogelmail.de or any other domain related to this service.**
 + Check availability of mailhost. (MX and A Resource Record)
 + Validate Top Level Domain. (list of TLDs (punycode) pulled from IANA stored in local textfile, updated monthly)
 + Validate Domainname (Syntax)
@@ -14,19 +14,15 @@ Blacklisted domains are listed in an easy to edit text file **blacklist.txt** wh
 ## API
 
 ```
-
 $mailcheck = $modules->get('EmailVerification');
 
-$mailcheck->getTLDs(cycle=2592000) // get Array of punycoded TLDs, cyclic updated
+$mailcheck->blacklisted(email|domain) // return bool/ string
+$mailcheck->validTLD(tld) // validate a top level domain return bool
+$mailcheck->getTLDs(cycle=2592000) // get Array of punycoded TLDs, cyclic updated data pulled from IANA
 $mailcheck->validDomainName(domain); // return bool
 $mailcheck->validHostName(host); // return bool/ string
-$mailcheck->blacklisted(email|domain) // return bool/ string
-$mailcheck->hostavailable(email|domain) // return bool
-
+$mailcheck->validHost(email|domain) // return bool
 $mailcheck->addToBlacklist(email|domain) // add single value
-$mailcheck->add(string,replace=false) // create, overwrite, update blacklist, single or multiple value
-$mailcheck->clean() // cleanup blacklist file (remove empty strings & duplicates, sort)
-
 ```
 
 ## License
