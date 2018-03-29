@@ -191,8 +191,16 @@ class EmailVerification extends WireData implements Module {
 		if (!$input) return null;
 		$domain = $this->getDomain($input);
 		if (!$this->validDomainName($domain)) return false;
+		// check if invalid domain is redirected to ISPs own servers (e.g. search)
+		$invalidHostName = 'example.thisdomaindoesnotexistatall';
+		if (is_array(gethostbynamel($invalidHostName)) && in_array(gethostbyname($domain),gethostbynamel($invalidHostName))) return false;
+		// must not point to any CNAME records
+		if (checkdnsrr($domain, "CNAME")) return false;
+		// must point to either A or AAAA record
+		if ($recordA = checkdnsrr($domain, "A") == false && $record4A = checkdnsrr($domain, "AAAA") == false) return false;
 		if (checkdnsrr($domain, "MX")) return "MX";
-		if (checkdnsrr($domain, "A")) return "A";
+		if ($recordA) return "A";
+		if ($record4A) return "AAAA";
 		return false;
 	}
 	
