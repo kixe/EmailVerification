@@ -3,7 +3,7 @@ EMAIL VERIFICATION
 
 Provides API for E-Mail and Domain Verification. Options:   
 
-+ Check email address against blacklist (editable textfile pulled from service fiddlemail.com/mogelmail.de updated weekly) Use the implementation on your own risk. **You maybe need a special license to call fiddlemail.com, mogelmail.de or any other domain related to this service.**
++ Check email address against blacklist (editable textfile) If a domain service https://trashmail-blacklist.org/ updated weekly) Use the implementation on your own risk. **You maybe need a special license to call fiddlemail.com, mogelmail.de or any other domain related to this service.**
 + Check availability of mailhost. (MX and A Resource Record)
 + Validate Top Level Domain. (list of TLDs (punycode) pulled from IANA stored in local textfile, updated monthly)
 + Validate Domainname (Syntax)

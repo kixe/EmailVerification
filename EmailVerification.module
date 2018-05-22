@@ -11,13 +11,14 @@
  * @copyright © 2014 Christoph Thelen
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/...
- * @version 1.2.5
+ * @version 1.2.6
  * @since 1.2.0 2018/02/18 - update email check via fiddlemail.com/ mogelmail.de
  * @since 1.2.1 2018/02/18 - update return value add() and addToBlacklist()
  * @since 1.2.2 2018/02/18 - fixed minor bugs
  * @since 1.2.3 2018/03/28 - fixed bug array to string conversion update() added json_encode()
  * @since 1.2.4 2018/03/29 - better mail host validation validHost();
  * @since 1.2.5 2018/05/22 - switch from fiddlemail.com/ mogelmail.de service to trashmail-blacklist.org which is free
+ * @since 1.2.6 2018/05/22 - fixed bug
  * 
  * 
  * ProcessWire 2.x/ 3.x 
@@ -35,7 +36,7 @@ class EmailVerification extends WireData implements Module {
 		return array(
 
 			'title' => 'Email Verification', 
-			'version' => 125, 
+			'version' => 126, 
 			'summary' => __('E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.'),
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
@@ -199,7 +200,9 @@ class EmailVerification extends WireData implements Module {
 		// must not point to any CNAME records
 		if (checkdnsrr($domain, "CNAME")) return false;
 		// must point to either A or AAAA record
-		if ($recordA = checkdnsrr($domain, "A") == false && $record4A = checkdnsrr($domain, "AAAA") == false) return false;
+		$recordA = checkdnsrr($domain, "A");
+		$record4A = checkdnsrr($domain, "AAAA");
+		if ($recordA === false && $record4A === false) return false;
 		if (checkdnsrr($domain, "MX")) return "MX";
 		if ($recordA) return "A";
 		if ($record4A) return "AAAA";
