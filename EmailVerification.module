@@ -11,12 +11,13 @@
  * @copyright © 2014 Christoph Thelen
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/...
- * @version 1.2.4
+ * @version 1.2.5
  * @since 1.2.0 2018/02/18 - update email check via fiddlemail.com/ mogelmail.de
  * @since 1.2.1 2018/02/18 - update return value add() and addToBlacklist()
  * @since 1.2.2 2018/02/18 - fixed minor bugs
  * @since 1.2.3 2018/03/28 - fixed bug array to string conversion update() added json_encode()
  * @since 1.2.4 2018/03/29 - better mail host validation validHost();
+ * @since 1.2.5 2018/05/22 - switch from fiddlemail.com/ mogelmail.de service to trashmail-blacklist.org which is free
  * 
  * 
  * ProcessWire 2.x/ 3.x 
@@ -34,7 +35,7 @@ class EmailVerification extends WireData implements Module {
 		return array(
 
 			'title' => 'Email Verification', 
-			'version' => 124, 
+			'version' => 125, 
 			'summary' => __('E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.'),
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
@@ -176,8 +177,8 @@ class EmailVerification extends WireData implements Module {
 		}
 		if (!$this->validHost($domain)) return false;
 		else if (!file_exists($this->filepath) || time() - filemtime($this->filepath) > 604800) {
-			$check = $this->mogelmail($domain);
-			if ($check) return $this->add($domain);
+			$check = $this->isTrashmail($domain);
+			if ($check === true) return $this->add($domain);
 		}
 		return false;
 	}
@@ -216,7 +217,7 @@ class EmailVerification extends WireData implements Module {
 	 * @return null if no argument
 	 * @deprecated (maybe?) use api key in future
 	 * 
-	 */
+	 *
 	protected function mogelmail($input = null) {
 		if (!$input) return null;
 		$domain = $this->getDomain($input);
@@ -226,6 +227,27 @@ class EmailVerification extends WireData implements Module {
 		if (!is_numeric($return)) $this->error("Unexpected return value ($source)", Notice::logOnly);
 		else return (bool) $return;
 	}
+	*/
+
+	/**
+	 *
+	 * free service to check trashmails
+	 * @param $input string (domain/ email address)
+	 * @return null/ boolean
+	 * this function runs maximum once per week
+	 *
+	 * @see https://trashmail-blacklist.org
+	 * 
+	 */
+	public function isTrashmail($input) {
+		$domain = $this->getDomain($input);
+		$source = "https://v2.trashmail-blacklist.org/check/json/$domain"; // return json string {"status":"unknown","domain":"domain.org","added":1456095603,"lastchecked":1456095603}
+
+		if (!$this->checkRemoteFileAccess($source)) return null;
+		$json = file_get_contents($source);
+		$result = json_decode($json);
+		return $result->status == 'blacklisted';
+	}
 
 	/**
 	 *
@@ -233,6 +255,7 @@ class EmailVerification extends WireData implements Module {
 	 * 
 	 * @param $input string (domain/ email address)
 	 * @return boolean/ string
+	 *
 	 */
 	public function addToBlacklist($input) {
 		$domain = $this->getDomain($input);
