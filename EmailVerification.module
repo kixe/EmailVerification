@@ -11,7 +11,7 @@
  * @copyright © 2014 Christoph Thelen
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/...
- * @version 1.2.6
+ * @version 2.0.0
  * @since 1.2.0 2018/02/18 - update email check via fiddlemail.com/ mogelmail.de
  * @since 1.2.1 2018/02/18 - update return value add() and addToBlacklist()
  * @since 1.2.2 2018/02/18 - fixed minor bugs
@@ -19,6 +19,7 @@
  * @since 1.2.4 2018/03/29 - better mail host validation validHost();
  * @since 1.2.5 2018/05/22 - switch from fiddlemail.com/ mogelmail.de service to trashmail-blacklist.org which is free
  * @since 1.2.6 2018/05/22 - fixed bug
+ * @since 2.0.0 2018/05/25 - major update
  * 
  * 
  * ProcessWire 2.x/ 3.x 
@@ -29,14 +30,14 @@
  *
  */
 
-class EmailVerification extends WireData implements Module {
+class EmailVerification extends Wire implements Module {
 
 	public static function getModuleInfo() {
 
 		return array(
 
 			'title' => 'Email Verification', 
-			'version' => 126, 
+			'version' => 200, 
 			'summary' => __('E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.'),
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
@@ -46,7 +47,10 @@ class EmailVerification extends WireData implements Module {
 			);
 	}
 
-	protected $filepath;
+	protected static $files = array(
+		'b' => __DIR__ .'/blacklist.txt',
+		'w' => __DIR__ .'/whitelist.txt'
+	);
 
 	public function __construct() {
 	    // intentionally empty
@@ -71,28 +75,36 @@ class EmailVerification extends WireData implements Module {
 	*/
 
 	public function init() {
-		$this->filepath = __DIR__ .'/blacklist.txt';
-		$this->update();
+		// cyclical cleanup of white- and blacklist files
+		foreach(self::$files as $file) {
+			if (file_exists($file) && time() - filemtime($file) > 604800) {
+				if ($message = $this->clean($file)) {
+					$message = 'Updated file ' . $file . json_encode($message);
+					$this->message($message, Notice::logOnly);
+				}
+			}
+		}
 	}
 
 	/**
 	 * get array of all TLDs by IANA punycoded, uppercase, local text file updated monthly (30 days)
 	 *
 	 * @param $cycle int cycle time to update the tld file
-	 * @return array
+	 * @return bool/ array
 	 *
 	 */
-	public function getTLDs($cycle=2592000) {
+	public function getTLDs($cycle = 2592000) {
 		$source = "https://data.iana.org/TLD/tlds-alpha-by-domain.txt";
 		$file = __DIR__.'/tlds-alpha-by-domain.txt';
 		if (!file_exists($file) || time() - filemtime($file) > $cycle) {
+			if (!$this->checkRemoteFileAccess($source)) return false;
 			$update = file_get_contents($source);
-			if (file_put_contents($file,$update, LOCK_EX) === false) {
-				$this->error("Update of tlds-alpha-by-domain.txt failed");
+			if (file_put_contents($file, $update, LOCK_EX) === false) {
+				$this->error("Update of $file failed", Notice::logOnly);;
 				return false;
 			}
 		}
-		$tld = array_filter(file($file,FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES), function($e) { return (substr($e,0,1) == '#')?false:true; });
+		$tld = array_filter(file($file,FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES), function($e) { return (substr($e,0,1) == '#')? false :true; });
 		return $tld;
 	}
 
@@ -131,9 +143,12 @@ class EmailVerification extends WireData implements Module {
 	 *
 	 * @param $str string (email)
 	 * @return null/ string (domain)
+	 *
 	 */
-	public function getDomain($str = null) {
-		return strpos($str,'@')?substr(strrchr($str,'@'),1) : $str;		
+	public function getDomain($str) {
+		$domain = strpos($str,'@')?substr(strrchr($str,'@'),1) : $str;
+		if (!$this->validDomainName($domain)) return null;
+		return $domain;
 	}
 
 	/**
@@ -145,13 +160,14 @@ class EmailVerification extends WireData implements Module {
 	 */
 	public function validDomainName($domainname = '') {		
 		if (strlen($domainname) > 255 || strlen($domainname) < 2) return false;
-		return ($this->validHostName($this->idn_to_ascii($domainname)))?true : false;
+		return ($this->validHostName($this->idn_to_ascii($domainname)))? true : false;
 	}
 
 	/**
 	 * to verify a domain name you have to convert to punycode before
 	 * @param string (hostname) allowed characters A-Z, a-z, 0-9 and hyphen
 	 * @return boolean/ string
+	 *
 	 */
 	public function validHostName($hostname = '') {
 		if (strlen($hostname) > 255 || strlen($hostname) < 2) return false;
@@ -166,29 +182,65 @@ class EmailVerification extends WireData implements Module {
 	 * Determine if given domain or Email is blacklisted, update blacklist file (max. once per week)
 	 *
 	 * @param $input string (domain/ email address)
-	 * @param $cycle int
 	 * @return null/ boolean/ string
+	 * @deprecated use check() or info() instead
+	 *
 	 */
-	public function blacklisted($input = null) {
+	public function blacklisted($input = null, $mx = false) {
 		if (!$input) return null;
 		$domain = $this->getDomain($input);
-		if (file_exists($this->filepath)) {
-			$file = file($this->filepath, FILE_IGNORE_NEW_LINES);
-			if(in_array($this->idn_to_ascii($domain),$file)) return $domain;
+		if ($this->getDomain($input) == null) return null; // invalid domain
+		if ($this->has($domain, self::$files['b'])) return $domain;
+		if ($this->has($domain, self::$files['w'])) return false;
+		$validHost = $this->validHost($domain);
+		if ($validHost === false) return null; // missing mail server
+		$check = $this->isTrashmail($domain);
+		// add to local files if known
+		if ($check === true) return $this->blacklist($domain);
+		if ($check === false && $this->whitelist($domain)) return false;
+		if ($mx === false && $validHost === 'MX') {
+			getmxrr($domain, $hosts);
+			if (!empty($hosts)) {
+				$_mx = null;
+				foreach ($hosts as $host) {
+					$mx = $this->blacklisted($host, true);
+					if ($mx === false) return false;
+					else if ($mx === null) continue;
+					else $_mx = $mx;
+				}
+				if ($_mx) {
+					$this->blacklist($_mx);
+					return $domain;
+				}
+			}
 		}
-		if (!$this->validHost($domain)) return false;
-		else if (!file_exists($this->filepath) || time() - filemtime($this->filepath) > 604800) {
-			$check = $this->isTrashmail($domain);
-			if ($check === true) return $this->add($domain);
-		}
-		return false;
+		return null;	
 	}
+
+	/**
+	 * Determine if given domain or Email is blacklisted, whitelisted or unknown
+	 *
+	 * @param $input string (domain/ email address)
+	 * @return null/ boolean/ string
+	 *
+	 */
+	public function check($input = null) {}
+
+	/**
+	 * get detailed info about email address and domain
+	 *
+	 * @param $input string (domain/ email address)
+	 * @return string
+	 *
+	 */
+	public function info($input = null) {}
 
 	/**
 	 * Check DNS records corresponding to a given Internet host name or IP address
 	 *
 	 * @param $input string (domain/ email address)
 	 * @return null/ boolean/ string
+	 *
 	 */
 	public function validHost($input = null) {
 		if (!$input) return null;
@@ -202,42 +254,32 @@ class EmailVerification extends WireData implements Module {
 		// must point to either A or AAAA record
 		$recordA = checkdnsrr($domain, "A");
 		$record4A = checkdnsrr($domain, "AAAA");
-		if ($recordA === false && $record4A === false) return false;
-		if (checkdnsrr($domain, "MX")) return "MX";
+		$recordMX = checkdnsrr($domain, "MX");
+		if ($recordA === false && $record4A === false && $recordMX === true) {
+			getmxrr($domain, $hosts);
+			if (!empty($hosts)) {
+				foreach ($hosts as $host) {
+					$record4A = checkdnsrr($host, "AAAA");
+					$recordA = checkdnsrr($host, "A");
+					if ($recordA === true || $record4A === true) return "MX";
+				}
+				$hosts = json_encode($hosts);
+				$this->error("Domain [$domain] itself or one related MX RR $hosts must point to either A or AAAA record.");
+			}
+		}
+		if ($recordMX) return "MX";
 		if ($recordA) return "A";
 		if ($record4A) return "AAAA";
 		return false;
 	}
-	
-	/**
-	 *
-	 * if this service is used you have to respect terms of use
-	 * https://fiddlemail.com/info/terms.html
-	 * this function runs maximum once per week
-	 *
-	 * @param $input string (domain/ email address)
-	 * @return null/ boolean
-	 * @return null if no argument
-	 * @deprecated (maybe?) use api key in future
-	 * 
-	 *
-	protected function mogelmail($input = null) {
-		if (!$input) return null;
-		$domain = $this->getDomain($input);
-		$source = "https://fiddlemail.com/q/$domain"; // return string (0 or 1)
-		if (!$this->checkRemoteFileAccess($source)) return null;
-		$return = file_get_contents($source);
-		if (!is_numeric($return)) $this->error("Unexpected return value ($source)", Notice::logOnly);
-		else return (bool) $return;
-	}
-	*/
 
 	/**
-	 *
 	 * free service to check trashmails
 	 * @param $input string (domain/ email address)
 	 * @return null/ boolean
-	 * this function runs maximum once per week
+	 * true = blacklisted
+	 * false = whitelisted
+	 * null = unknown
 	 *
 	 * @see https://trashmail-blacklist.org
 	 * 
@@ -249,44 +291,115 @@ class EmailVerification extends WireData implements Module {
 		if (!$this->checkRemoteFileAccess($source)) return null;
 		$json = file_get_contents($source);
 		$result = json_decode($json);
-		return $result->status == 'blacklisted';
+		if ($result->status == 'blacklisted') return true;
+		else if ($result->status == 'whitelisted') return false;
+		else return null;
 	}
 
 	/**
-	 *
-	 * manually update blacklist with single email address or maildomain
+	 * manually add a single e-mail address or maildomain to blacklist
+	 * remove from whitelist
 	 * 
 	 * @param $input string (domain/ email address)
 	 * @return boolean/ string
 	 *
 	 */
-	public function addToBlacklist($input) {
+	public function blacklist($input) {
 		$domain = $this->getDomain($input);
 		if (!$this->validHost($domain)) return false;
-		return $this->add($domain, false);
+		if ($this->add($domain, self::$files['b']) && $this->remove($domain, self::$files['w'])) return $domain;
+		return false;
 	}
 
 	/**
-	 * add suspected domain to blacklist file
-	 * update or create new blacklist with a single entry
+	 * manually add a single e-mail address or maildomain to whitelist
+	 * remove from blacklist
 	 * 
-	 * @param $domain string
-	 * @return boolean
+	 * @param $input string (domain/ email address)
+	 * @return boolean/ string
+	 *
 	 */
-	protected function add($domain, $create = false) {
-		if (!file_exists($this->filepath)) $create = true;
-		$nl = $create? '' : "\n";
-		$create = $create ? 'w' : 'a';
-		if ($file = fopen($this->filepath, $create)) {
+	public function whitelist($input) {
+		$domain = $this->getDomain($input);
+		if (!$this->validHost($domain)) return false;
+		if ($this->add($domain, self::$files['w']) && $this->remove($domain, self::$files['b'])) return $domain;
+		return false;
+	}
+
+	/**
+	 * is domain present in list
+	 * 
+	 * @param $domain
+	 * @param $path file path
+	 * @return boolean
+	 *
+	 */
+	public function has($domain, $path) {
+		if (!file_exists($path)) return false;
+		$string = file_get_contents($path);
+		if ($string === false) throw new WireException("Failed to open file: $path");
+		if (false !== strpos($string, $domain)) return true;
+		return false;
+	}	
+
+	/**
+	 * add domain to a list
+	 * 
+	 * @param $domain
+	 * @param $path file path
+	 * @return string/ boolean
+	 *
+	 */
+	public function add($domain, $path) {
+		if (file_exists($path)) {
+			$string = file_get_contents($path);
+			if ($string === false) throw new WireException("Failed to open file: $path");
+			if (false !== strpos($string, $domain)) return $domain; // nothing to do
+		}
+		if ($this->save($domain, $path)) return $domain;
+		return false;
+	}	
+
+	/**
+	 * remove domain from a list
+	 * 
+	 * @param $domain
+	 * @param $path file path
+	 * @return string/ boolean
+	 *
+	 */
+	public function remove($domain, $path) {
+		if (!file_exists($path)) return $domain; // nothing to do
+		$string = file_get_contents($path);
+		if ($string === false) throw new WireException("Failed to open file: $path");
+		if (false === strpos($string, $domain)) return $domain; // nothing to do
+		$string = str_replace(array($domain."\n", $domain), '', $string);
+		if ($this->save($string, $path, false)) return $domain;
+		return false;
+	}
+
+	/**
+	 * append a string to a file and save
+	 * file will be created if not exist
+	 * 
+	 * @param $string
+	 * @param $path file path
+	 * @param $append bool append string to file or truncate/ create file
+	 * @return boolean
+	 *
+	 */
+	protected function save($string, $path, $append = true) {
+		if (!file_exists($path)) $append = false;
+		$nl = $append? "\n" : '';
+		$mode = $append? 'a' : 'w'; // append string to file or truncate/ create file
+		if ($file = fopen($path, $mode)) {
 			flock($file, LOCK_EX);
-			fwrite($file, $nl.$domain);
+			fwrite($file, $nl.$string);
 			flock($file, LOCK_UN);
 			fclose($file);
-			// chmod($this->filepath, 0777); // warning: operation not permitted
-			return $domain;
-		} else {
-			return false;
-		}		
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -315,7 +428,7 @@ class EmailVerification extends WireData implements Module {
 	 * @return array/ boolean
 	 * @see function validHost()
 	 *
-	 */
+	 *
 	public function checkBlacklistHosts($from = 0, $to = 10) {
 		if ($to - $from >= 50) throw new WireException('Maximum number of tests exceeded');
 		if (!file_exists($this->filepath)) return false;
@@ -331,24 +444,27 @@ class EmailVerification extends WireData implements Module {
 		}
 		return false;
 	}
+	*/
 
 	/**
-	 * clean up blacklist file
+	 * clean up files
 	 *
 	 * delete surrounding spaces and tabs
 	 * remove empty lines
 	 * delete duplicates
 	 * sort alphabetic
 	 *
+	 * @param string (path to file)
 	 * @return multiple array of total number of entries, deleted emptylines and deleted duplicates (value => number)
+	 *
 	 */
-	public function clean() {
-		if(!is_writable($this->filepath)) return $this->error("File or permission missing " . $this->filepath);
+	public function clean($filepath) {
+		if(!is_writable($filepath)) return $this->error("File or permission missing " . $filepath);
 		$return = array();
 
-		$file = file($this->filepath);
-		$file = array_map('trim',$file); //delete surrounding spaces and remove linebreaks
-		$uniques = array_unique($file); //delete duplicates
+		$file = file($filepath);
+		$file = array_map('trim',$file); // delete surrounding spaces and remove linebreaks
+		$uniques = array_unique($file); // delete duplicates
 		$dupes = array_diff_key( $file, $uniques); // array of duplicates
 
 		sort($uniques); // sort alphabetic
@@ -359,32 +475,13 @@ class EmailVerification extends WireData implements Module {
 			$return['deleted_emptystrings'] = 0;		
 		}
 		$return['totalnum'] = count($uniques);
-		$uniques = implode("\n",$uniques); //add linebreaks
-		$this->add(trim($uniques),true); //overwrite
+		$uniques = implode("\n",$uniques); // add linebreaks
+		$this->save(trim($uniques), $filepath, false); // overwrite
 
 		$return['deleted_duplicates'] = array_count_values($dupes);
 		if (array_key_exists('', $return['deleted_duplicates'])) $return['deleted_emptystrings'] += $return['deleted_duplicates'][''];
 		unset($return['deleted_duplicates']['']);
 
 		return $return;		
-	}
-
-	/**
-	 * cyclical cleaning up of the blacklist file triggered by init
-	 *
-	 * @return bool
-	 * @see init(), clean()
-	 * @todo implement checkBlacklistHosts() check only 10 records per check remind $from from last check
-	 *
-	 */
-	protected function update() {
-		if (file_exists($this->filepath) && time() - filemtime($this->filepath) > 604800) {
-			if ($message = $this->clean()) {
-				$message = 'Updated file ' . $this->filepath . json_encode($message);
-				$this->message($message, Notice::logOnly);
-				return true;
-			}
-		}
-		return false;
 	}
 }
