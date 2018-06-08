@@ -11,7 +11,7 @@
  * @copyright © 2014 Christoph Thelen
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/...
- * @version 2.0.0
+ * @version 2.0.1
  * @since 1.2.0 2018/02/18 - update email check via fiddlemail.com/ mogelmail.de
  * @since 1.2.1 2018/02/18 - update return value add() and addToBlacklist()
  * @since 1.2.2 2018/02/18 - fixed minor bugs
@@ -20,6 +20,7 @@
  * @since 1.2.5 2018/05/22 - switch from fiddlemail.com/ mogelmail.de service to trashmail-blacklist.org which is free
  * @since 1.2.6 2018/05/22 - fixed bug
  * @since 2.0.0 2018/05/25 - major update
+ * @since 2.0.1 2018/06/08 - protect internal functions, throw exception if domain is both: blacklisted/ whitelisted
  * 
  * 
  * ProcessWire 2.x/ 3.x 
@@ -37,7 +38,7 @@ class EmailVerification extends Wire implements Module {
 		return array(
 
 			'title' => 'Email Verification', 
-			'version' => 200, 
+			'version' => 201, 
 			'summary' => __('E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.'),
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
@@ -190,8 +191,11 @@ class EmailVerification extends Wire implements Module {
 		if (!$input) return null;
 		$domain = $this->getDomain($input);
 		if ($this->getDomain($input) == null) return null; // invalid domain
-		if ($this->has($domain, self::$files['b'])) return $domain;
-		if ($this->has($domain, self::$files['w'])) return false;
+		$b = $this->has($domain, self::$files['b']);
+		$w = $this->has($domain, self::$files['w']);
+		if ($b && $w) throw new WireException("Please manually remove domain $domain from either blacklist.txt or whitelist.txt");
+		if ($b) return $domain;
+		if ($w) return false;
 		$validHost = $this->validHost($domain);
 		if ($validHost === false) return null; // missing mail server
 		$check = $this->isTrashmail($domain);
@@ -334,7 +338,7 @@ class EmailVerification extends Wire implements Module {
 	 * @return boolean
 	 *
 	 */
-	public function has($domain, $path) {
+	protected function has($domain, $path) {
 		if (!file_exists($path)) return false;
 		$string = file_get_contents($path);
 		if ($string === false) throw new WireException("Failed to open file: $path");
@@ -350,7 +354,7 @@ class EmailVerification extends Wire implements Module {
 	 * @return string/ boolean
 	 *
 	 */
-	public function add($domain, $path) {
+	protected function add($domain, $path) {
 		if (file_exists($path)) {
 			$string = file_get_contents($path);
 			if ($string === false) throw new WireException("Failed to open file: $path");
@@ -368,7 +372,7 @@ class EmailVerification extends Wire implements Module {
 	 * @return string/ boolean
 	 *
 	 */
-	public function remove($domain, $path) {
+	protected function remove($domain, $path) {
 		if (!file_exists($path)) return $domain; // nothing to do
 		$string = file_get_contents($path);
 		if ($string === false) throw new WireException("Failed to open file: $path");
@@ -458,7 +462,7 @@ class EmailVerification extends Wire implements Module {
 	 * @return multiple array of total number of entries, deleted emptylines and deleted duplicates (value => number)
 	 *
 	 */
-	public function clean($filepath) {
+	protected function clean($filepath) {
 		if(!is_writable($filepath)) return $this->error("File or permission missing " . $filepath);
 		$return = array();
 

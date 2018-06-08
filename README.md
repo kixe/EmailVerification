@@ -1,17 +1,17 @@
 EMAIL VERIFICATION
 ==================
 
-Provides API for E-Mail and Domain Verification. Options:   
+Functional **API** for E-Mail and Domain Verification.
 
-+ Check email address against blacklist (editable textfile) If a domain service https://trashmail-blacklist.org/ updated weekly) Use the implementation on your own risk. **You maybe need a special license to call fiddlemail.com, mogelmail.de or any other domain related to this service.**
-+ Check availability of mailhost. (MX and A Resource Record)
-+ Validate Top Level Domain. (list of TLDs (punycode) pulled from IANA stored in local textfile, updated monthly)
-+ Validate Domainname (Syntax)
-+ Validate Hostname (Syntax)
++ **Email address verification** against domain black- and whitelist (automated updates via online service [trashmail-blacklist.org](https://trashmail-blacklist.org))
++ Determination of **availability of a mailhost**. (MX and A Resource Record)
++ Validation of **Top Level Domains.** (list of TLDs (punycode encoded) pulled from IANA stored in local textfile, automated monthly update)
++ **Syntax validation** of **domainnames**
++ **Syntax validation** of **hostnames** (punycode encoded)
 
-Blacklisted domains are listed in an easy to edit text file **blacklist.txt** which is stored in the repository of this module.  
+Domains are listed in easy to edit text files **blacklist.txt** and **whitelist.txt** which are stored in the repository of this module.  
 
-## API
+## API Usage
 
 ```
 // get module  
@@ -26,6 +26,9 @@ $mailcheck->validTLD(tld)
 // return array of punycoded TLDs - cyclic updated, data pulled from IANA
 $mailcheck->getTLDs(cycle=2592000)
 
+// return string - domain part of an email address
+$mailcheck->getDomain($str)
+
 // return bool - checks syntax converts to punycode
 $mailcheck->validDomainName(domain);
 
@@ -35,8 +38,13 @@ $mailcheck->validHostName(host);
 // return bool - checks syntax and accessibility
 $mailcheck->validHost(email|domain)
 
-// add a single value to blacklist
-$mailcheck->addToBlacklist(email|domain)
+// add a single value to blacklist, remove from whitelist
+// return false or string (domain)
+$mailcheck->blacklist(email|domain)
+
+// add a single value to whitelist, remove from blacklist
+// return false or string (domain)
+$mailcheck->whitelist(email|domain)
 ```
 
 ## License
