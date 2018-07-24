@@ -11,7 +11,7 @@
  * @copyright © 2014 Christoph Thelen
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/...
- * @version 2.0.1
+ * @version 2.0.3
  * @since 1.2.0 2018/02/18 - update email check via fiddlemail.com/ mogelmail.de
  * @since 1.2.1 2018/02/18 - update return value add() and addToBlacklist()
  * @since 1.2.2 2018/02/18 - fixed minor bugs
@@ -21,6 +21,8 @@
  * @since 1.2.6 2018/05/22 - fixed bug
  * @since 2.0.0 2018/05/25 - major update
  * @since 2.0.1 2018/06/08 - protect internal functions, throw exception if domain is both: blacklisted/ whitelisted
+ * @since 2.0.2 2018/07/18 - function validHost() - use gethostbyname() only for secondlevel domains
+ * @since 2.0.3 2018/07/18 - fixed dot issue checkdnsrr() @see https://secure.php.net/manual/de/function.checkdnsrr.php#119969
  * 
  * 
  * ProcessWire 2.x/ 3.x 
@@ -38,7 +40,7 @@ class EmailVerification extends Wire implements Module {
 		return array(
 
 			'title' => 'Email Verification', 
-			'version' => 201, 
+			'version' => 203, 
 			'summary' => __('E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.'),
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
@@ -252,19 +254,24 @@ class EmailVerification extends Wire implements Module {
 		if (!$this->validDomainName($domain)) return false;
 		// check if invalid domain is redirected to ISPs own servers (e.g. search)
 		$invalidHostName = 'example.thisdomaindoesnotexistatall';
-		if (is_array(gethostbynamel($invalidHostName)) && in_array(gethostbyname($domain),gethostbynamel($invalidHostName))) return false;
+		if (substr_count($domain, '.') > 1) {
+			$parts = explode('.', $domain);
+			$mainDomain = implode('.',array_slice($parts, -2));
+		}
+		if (is_array(gethostbynamel($invalidHostName)) && in_array(gethostbyname($mainDomain),gethostbynamel($invalidHostName))) return false;
+
 		// must not point to any CNAME records
-		if (checkdnsrr($domain, "CNAME")) return false;
+		if (checkdnsrr(trim($domain,'.').'.', "CNAME")) return false;
 		// must point to either A or AAAA record
-		$recordA = checkdnsrr($domain, "A");
-		$record4A = checkdnsrr($domain, "AAAA");
-		$recordMX = checkdnsrr($domain, "MX");
+		$recordA = checkdnsrr(trim($domain,'.').'.', "A");
+		$record4A = checkdnsrr(trim($domain,'.').'.', "AAAA");
+		$recordMX = checkdnsrr(trim($domain,'.').'.', "MX");
 		if ($recordA === false && $record4A === false && $recordMX === true) {
 			getmxrr($domain, $hosts);
 			if (!empty($hosts)) {
 				foreach ($hosts as $host) {
-					$record4A = checkdnsrr($host, "AAAA");
-					$recordA = checkdnsrr($host, "A");
+					$record4A = checkdnsrr(trim($host,'.').'.', "AAAA");
+					$recordA = checkdnsrr(trim($host,'.').'.', "A");
 					if ($recordA === true || $record4A === true) return "MX";
 				}
 				$hosts = json_encode($hosts);
