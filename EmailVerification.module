@@ -11,7 +11,7 @@
  * @copyright © 2014 Christoph Thelen
  * @license Licensed under GNU/GPL v3
  * @link https://processwire.com/talk/topic/...
- * @version 2.0.3
+ * @version 2.0.4
  * @since 1.2.0 2018/02/18 - update email check via fiddlemail.com/ mogelmail.de
  * @since 1.2.1 2018/02/18 - update return value add() and addToBlacklist()
  * @since 1.2.2 2018/02/18 - fixed minor bugs
@@ -23,6 +23,7 @@
  * @since 2.0.1 2018/06/08 - protect internal functions, throw exception if domain is both: blacklisted/ whitelisted
  * @since 2.0.2 2018/07/18 - function validHost() - use gethostbyname() only for secondlevel domains
  * @since 2.0.3 2018/07/18 - fixed dot issue checkdnsrr() @see https://secure.php.net/manual/de/function.checkdnsrr.php#119969
+ * @since 2.0.4 2018/09/09 - fixed bug: check failed if domain is substring of listed domain e.g. gmail.com -> nobugmail.com
  * 
  * 
  * ProcessWire 2.x/ 3.x 
@@ -40,7 +41,7 @@ class EmailVerification extends Wire implements Module {
 		return array(
 
 			'title' => 'Email Verification', 
-			'version' => 203, 
+			'version' => 204, 
 			'summary' => __('E-Mail Verification and Domain Validation via API. Checks an email address against blacklist and availability of mailhost. Blacklisted domains and email addresses are simply stored in a text file. Easy to edit.'),
 			'href' => 'https://processwire.com/talk/topic/7826-module-email-verification/',
 			'author' => 'kixe',
@@ -342,15 +343,20 @@ class EmailVerification extends Wire implements Module {
 	 * 
 	 * @param $domain
 	 * @param $path file path
-	 * @return boolean
+	 * @param $remove bool
+	 * @return boolean/ array
 	 *
 	 */
-	protected function has($domain, $path) {
+	protected function has($domain, $path, $remove = false) {
 		if (!file_exists($path)) return false;
-		$string = file_get_contents($path);
-		if ($string === false) throw new WireException("Failed to open file: $path");
-		if (false !== strpos($string, $domain)) return true;
-		return false;
+		$array = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+		if ($array === false) throw new WireException("Failed to open file: $path");
+		$flip_array = array_flip($array);
+		$has = isset($flip_array[$domain]);
+		if (!$remove) return $has;
+		if (!$has) return false;
+		unset($flip_array[$domain]);
+		return array_keys($flip_array);
 	}	
 
 	/**
@@ -362,11 +368,7 @@ class EmailVerification extends Wire implements Module {
 	 *
 	 */
 	protected function add($domain, $path) {
-		if (file_exists($path)) {
-			$string = file_get_contents($path);
-			if ($string === false) throw new WireException("Failed to open file: $path");
-			if (false !== strpos($string, $domain)) return $domain; // nothing to do
-		}
+		if ($this->has($domain, $path)) return $domain; // nothing to do
 		if ($this->save($domain, $path)) return $domain;
 		return false;
 	}	
@@ -380,12 +382,10 @@ class EmailVerification extends Wire implements Module {
 	 *
 	 */
 	protected function remove($domain, $path) {
-		if (!file_exists($path)) return $domain; // nothing to do
-		$string = file_get_contents($path);
-		if ($string === false) throw new WireException("Failed to open file: $path");
-		if (false === strpos($string, $domain)) return $domain; // nothing to do
-		$string = str_replace(array($domain."\n", $domain), '', $string);
-		if ($this->save($string, $path, false)) return $domain;
+		$uniques = $this->has($domain, $path, true);
+		if (false === $uniques) return $domain; // nothing to do
+		$uniques = implode("\n",$uniques);
+		if ($this->save($uniques, $path, false)) return $domain;
 		return false;
 	}
 
